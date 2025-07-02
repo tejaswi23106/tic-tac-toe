@@ -77,36 +77,38 @@ bool gameOver(vector<vector<char>>& board) {
     return rowCrossed(board) || columnCrossed(board) || diagonalCrossed(board);
 }
 
-int minimax(vector<vector<char>>& board, int depth, bool isAI) {
-    int score = 0;
-    int bestScore = 0;
+int minimax(vector<vector<char>>& board, int depth, bool isAI, int alpha, int beta) {
     if (gameOver(board)) {
         return isAI ? -10 : 10;
     }
     if (depth >= 9) return 0;
 
     if (isAI) {
-        bestScore = -999;
+        int bestScore = -999;
         for (int i = 0; i < SIDE; i++) {
             for (int j = 0; j < SIDE; j++) {
                 if (board[i][j] == '*') {
                     board[i][j] = COMPUTERMOVE;
-                    score = minimax(board, depth + 1, false);
+                    int score = minimax(board, depth + 1, false, alpha, beta);
                     board[i][j] = '*';
                     bestScore = max(score, bestScore);
+                    alpha = max(alpha, bestScore);
+                    if (beta <= alpha) return bestScore;  // Alpha-Beta Pruning
                 }
             }
         }
         return bestScore;
     } else {
-        bestScore = 999;
+        int bestScore = 999;
         for (int i = 0; i < SIDE; i++) {
             for (int j = 0; j < SIDE; j++) {
                 if (board[i][j] == '*') {
                     board[i][j] = HUMANMOVE;
-                    score = minimax(board, depth + 1, true);
+                    int score = minimax(board, depth + 1, true, alpha, beta);
                     board[i][j] = '*';
                     bestScore = min(score, bestScore);
+                    beta = min(beta, bestScore);
+                    if (beta <= alpha) return bestScore;  // Alpha-Beta Pruning
                 }
             }
         }
@@ -116,12 +118,12 @@ int minimax(vector<vector<char>>& board, int depth, bool isAI) {
 
 int bestMove(vector<vector<char>>& board, int moveIndex) {
     int x = -1, y = -1;
-    int score = 0, bestScore = -999;
+    int bestScore = -999;
     for (int i = 0; i < SIDE; i++) {
         for (int j = 0; j < SIDE; j++) {
             if (board[i][j] == '*') {
                 board[i][j] = COMPUTERMOVE;
-                score = minimax(board, moveIndex + 1, false);
+                int score = minimax(board, moveIndex + 1, false, -1000, 1000);
                 board[i][j] = '*';
                 if (score > bestScore) {
                     bestScore = score;
