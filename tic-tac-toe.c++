@@ -1,6 +1,8 @@
-//Tic Tac Toe
+// Tic-Tac-Toe with Difficulty Modes
 #include <iostream>
 #include <vector>
+#include <cstdlib>
+#include <ctime>
 using namespace std;
 
 #define COMPUTER 1
@@ -9,12 +11,19 @@ using namespace std;
 #define COMPUTERMOVE 'O'
 #define HUMANMOVE 'X'
 
+int difficulty = 3; // 1 = Easy, 2 = Medium, 3 = Hard
+
 void showBoard(vector<vector<char>>& board) {
-    cout << "\t\t\t " << board[0][0] << " | " << board[0][1] << " | " << board[0][2] << "\n";
-    cout << "\t\t\t-----------\n";
-    cout << "\t\t\t " << board[1][0] << " | " << board[1][1] << " | " << board[1][2] << "\n";
-    cout << "\t\t\t-----------\n";
-    cout << "\t\t\t " << board[2][0] << " | " << board[2][1] << " | " << board[2][2] << "\n\n";
+    for (int i = 0; i < SIDE; i++) {
+        cout << "\t\t\t ";
+        for (int j = 0; j < SIDE; j++) {
+            cout << board[i][j];
+            if (j < 2) cout << " | ";
+        }
+        cout << "\n";
+        if (i < 2) cout << "\t\t\t-----------\n";
+    }
+    cout << "\n";
 }
 
 void showInstructions() {
@@ -27,61 +36,41 @@ void showInstructions() {
 }
 
 void initialise(vector<vector<char>>& board) {
-    for (int i = 0; i < SIDE; i++) {
-        for (int j = 0; j < SIDE; j++) {
+    for (int i = 0; i < SIDE; i++)
+        for (int j = 0; j < SIDE; j++)
             board[i][j] = '*';
-        }
-    }
 }
 
 void declareWinner(int whoseTurn) {
-    if (whoseTurn == COMPUTER)
-        cout << "COMPUTER has won\n";
-    else
-        cout << "HUMAN has won\n";
+    cout << ((whoseTurn == COMPUTER) ? "COMPUTER" : "HUMAN") << " has won\n";
 }
 
 bool rowCrossed(vector<vector<char>>& board) {
-    for (int i = 0; i < SIDE; i++) {
-        if (board[i][0] == board[i][1] &&
-            board[i][1] == board[i][2] &&
-            board[i][0] != '*')
+    for (int i = 0; i < SIDE; i++)
+        if (board[i][0] == board[i][1] && board[i][1] == board[i][2] && board[i][0] != '*')
             return true;
-    }
     return false;
 }
 
 bool columnCrossed(vector<vector<char>>& board) {
-    for (int i = 0; i < SIDE; i++) {
-        if (board[0][i] == board[1][i] &&
-            board[1][i] == board[2][i] &&
-            board[0][i] != '*')
+    for (int i = 0; i < SIDE; i++)
+        if (board[0][i] == board[1][i] && board[1][i] == board[2][i] && board[0][i] != '*')
             return true;
-    }
     return false;
 }
 
 bool diagonalCrossed(vector<vector<char>>& board) {
-    if (board[0][0] == board[1][1] &&
-        board[1][1] == board[2][2] &&
-        board[0][0] != '*')
-        return true;
-    if (board[0][2] == board[1][1] &&
-        board[1][1] == board[2][0] &&
-        board[0][2] != '*')
-        return true;
-    return false;
+    return (board[0][0] == board[1][1] && board[1][1] == board[2][2] && board[0][0] != '*') ||
+           (board[0][2] == board[1][1] && board[1][1] == board[2][0] && board[0][2] != '*');
 }
 
 bool gameOver(vector<vector<char>>& board) {
     return rowCrossed(board) || columnCrossed(board) || diagonalCrossed(board);
 }
 
-int minimax(vector<vector<char>>& board, int depth, bool isAI, int alpha, int beta) {
-    if (gameOver(board)) {
-        return isAI ? -10 : 10;
-    }
-    if (depth >= 9) return 0;
+int minimax(vector<vector<char>>& board, int depth, bool isAI, int alpha, int beta, int maxDepth) {
+    if (gameOver(board)) return isAI ? -10 : 10;
+    if (depth >= maxDepth || depth >= 9) return 0;
 
     if (isAI) {
         int bestScore = -999;
@@ -89,11 +78,11 @@ int minimax(vector<vector<char>>& board, int depth, bool isAI, int alpha, int be
             for (int j = 0; j < SIDE; j++) {
                 if (board[i][j] == '*') {
                     board[i][j] = COMPUTERMOVE;
-                    int score = minimax(board, depth + 1, false, alpha, beta);
+                    int score = minimax(board, depth + 1, false, alpha, beta, maxDepth);
                     board[i][j] = '*';
                     bestScore = max(score, bestScore);
                     alpha = max(alpha, bestScore);
-                    if (beta <= alpha) return bestScore;  // Alpha-Beta Pruning
+                    if (beta <= alpha) return bestScore;
                 }
             }
         }
@@ -104,11 +93,11 @@ int minimax(vector<vector<char>>& board, int depth, bool isAI, int alpha, int be
             for (int j = 0; j < SIDE; j++) {
                 if (board[i][j] == '*') {
                     board[i][j] = HUMANMOVE;
-                    int score = minimax(board, depth + 1, true, alpha, beta);
+                    int score = minimax(board, depth + 1, true, alpha, beta, maxDepth);
                     board[i][j] = '*';
                     bestScore = min(score, bestScore);
                     beta = min(beta, bestScore);
-                    if (beta <= alpha) return bestScore;  // Alpha-Beta Pruning
+                    if (beta <= alpha) return bestScore;
                 }
             }
         }
@@ -117,13 +106,33 @@ int minimax(vector<vector<char>>& board, int depth, bool isAI, int alpha, int be
 }
 
 int bestMove(vector<vector<char>>& board, int moveIndex) {
-    int x = -1, y = -1;
-    int bestScore = -999;
+    // Easy mode — random move
+    if (difficulty == 1) {
+        vector<int> options;
+        for (int i = 0; i < SIDE; i++)
+            for (int j = 0; j < SIDE; j++)
+                if (board[i][j] == '*') options.push_back(i * 3 + j);
+        return options[rand() % options.size()];
+    }
+
+    // Medium mode — 25% chance of random move
+    if (difficulty == 2 && rand() % 4 == 0) {
+        vector<int> options;
+        for (int i = 0; i < SIDE; i++)
+            for (int j = 0; j < SIDE; j++)
+                if (board[i][j] == '*') options.push_back(i * 3 + j);
+        return options[rand() % options.size()];
+    }
+
+    // Hard mode or depth-limited Minimax
+    int maxDepth = (difficulty == 2) ? 3 : 9;
+    int x = -1, y = -1, bestScore = -999;
+
     for (int i = 0; i < SIDE; i++) {
         for (int j = 0; j < SIDE; j++) {
             if (board[i][j] == '*') {
                 board[i][j] = COMPUTERMOVE;
-                int score = minimax(board, moveIndex + 1, false, -1000, 1000);
+                int score = minimax(board, moveIndex + 1, false, -1000, 1000, maxDepth);
                 board[i][j] = '*';
                 if (score > bestScore) {
                     bestScore = score;
@@ -141,6 +150,7 @@ void playTicTacToe(int whoseTurn) {
     int moveIndex = 0, x = 0, y = 0;
     initialise(board);
     showInstructions();
+
     while (!gameOver(board) && moveIndex != SIDE * SIDE) {
         int n;
         if (whoseTurn == COMPUTER) {
@@ -163,19 +173,23 @@ void playTicTacToe(int whoseTurn) {
             n--;
             x = n / SIDE;
             y = n % SIDE;
-            if (n >= 0 && n < 9 && board[x][y] == '*') {
-                board[x][y] = HUMANMOVE;
-                cout << "\nHUMAN has put a " << HUMANMOVE << " in cell " << (n + 1) << "\n\n";
-                showBoard(board);
-                moveIndex++;
-                whoseTurn = COMPUTER;
-            } else if (n >= 0 && n < 9) {
-                cout << "\nPosition is occupied, select any one place from the available places\n\n";
-            } else {
-                cout << "Invalid position\n";
+
+            while (n < 0 || n >= 9 || board[x][y] != '*') {
+                cout << "Invalid or occupied position. Enter again: ";
+                cin >> n;
+                n--;
+                x = n / SIDE;
+                y = n % SIDE;
             }
+
+            board[x][y] = HUMANMOVE;
+            cout << "\nHUMAN has put a " << HUMANMOVE << " in cell " << (n + 1) << "\n\n";
+            showBoard(board);
+            moveIndex++;
+            whoseTurn = COMPUTER;
         }
     }
+
     if (!gameOver(board) && moveIndex == SIDE * SIDE)
         cout << "It's a draw\n";
     else {
@@ -185,9 +199,13 @@ void playTicTacToe(int whoseTurn) {
 }
 
 int main() {
+    srand(time(0));
     cout << "\n-------------------------------------------------------------------\n\n";
     cout << "\t\t\t Tic-Tac-Toe\n";
     cout << "\n-------------------------------------------------------------------\n\n";
+    cout << "Choose difficulty level:\n1. Easy\n2. Medium\n3. Hard\nYour choice: ";
+    cin >> difficulty;
+
     char cont = 'y';
     do {
         char choice;
@@ -205,3 +223,4 @@ int main() {
     } while (cont == 'n');
     return 0;
 }
+
